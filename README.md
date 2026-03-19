@@ -27,28 +27,6 @@ Express, MariaDB, HTML/CSS Grid를 사용한 기사 등록·조회 웹 애플리
 - 우측 사이드바에는 랭킹과 카테고리 정보 표시
 - 기사 작성 페이지에서 제목, 카테고리, 기자명, 본문 입력 가능
 
-## 실행 방법
-
-1. MariaDB 실행
-2. `news_db` 데이터베이스 생성
-3. `db/schema.sql` 실행
-4. 환경변수 설정
-5. `npm install`
-6. `node server.js`
-
-## 환경변수 예시
-
-- `DB_HOST=127.0.0.1`
-- `DB_PORT=3306`
-- `DB_USER=newsapp`
-- `DB_PASSWORD=news1234`
-- `DB_NAME=news_db`
-
-## 접속 주소
-
-- 메인 페이지: `http://localhost:3002/`
-- 기사 작성: `http://localhost:3002/write`
-
 ## 사용 기술
 
 - Node.js
