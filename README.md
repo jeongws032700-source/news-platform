@@ -25,4 +25,21 @@ MariaDB에 `schema.sql` 실행 후 `server.js`의 `host`, `user`, `password`, `d
 
 ## Colab
 
-자세한 절차는 `README_COLAB.md` 참고.
+Colab에서 MariaDB 설치·실행, 프로젝트 업로드, `cloudflared` 터널 등은 수업 안내에 맞춰 진행하세요. (`colab_step1.ipynb` 참고)
+
+## GitHub에 올리기
+
+로컬에서 이미 `git init`·첫 커밋이 되어 있다면:
+
+1. GitHub에서 **New repository** → 이름만 정하고 README는 비워서 생성.
+2. 터미널:
+
+```bash
+cd d:\3.16\news-platform
+git remote add origin https://github.com/본인아이디/저장소이름.git
+git push -u origin main
+```
+
+처음이면 GitHub 로그인(토큰/PAT)이 필요할 수 있음.
+
+**커밋 작성자 바꾸기:** `git config user.name "이름"` / `git config user.email "이메일"` (이 폴더만이면 `--global` 빼기)
