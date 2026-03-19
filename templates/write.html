@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>기사 작성 — 충정일보</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"
+    />
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="top-nav">
+        <a href="/" class="nav-back" aria-label="홈으로">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+        </a>
+        <span class="nav-title">기사 작성</span>
+        <span style="width:40px"></span>
+      </header>
+
+      <div class="write-hero">
+        <h1>새 기사를 등록해요</h1>
+        <p>제목과 본문을 입력한 뒤 등록하면 목록에 반영돼요.</p>
+      </div>
+
+      <form id="news-form" class="card form-stack" novalidate>
+        <div class="field">
+          <label for="f-title">제목</label>
+          <input
+            id="f-title"
+            type="text"
+            name="title"
+            required
+            maxlength="255"
+            placeholder="기사 제목을 입력하세요"
+            autocomplete="off"
+          />
+        </div>
+        <div class="field">
+          <label for="f-category">분류</label>
+          <input
+            id="f-category"
+            type="text"
+            name="category"
+            required
+            maxlength="100"
+            placeholder="예: 사회, 경제, 문화"
+            autocomplete="off"
+          />
+        </div>
+        <div class="field">
+          <label for="f-author">기자명</label>
+          <input
+            id="f-author"
+            type="text"
+            name="author"
+            required
+            maxlength="100"
+            placeholder="이름을 입력하세요"
+            autocomplete="name"
+          />
+        </div>
+        <div class="field">
+          <label for="f-content">본문</label>
+          <textarea
+            id="f-content"
+            name="content"
+            required
+            placeholder="기사 내용을 입력하세요"
+          ></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary btn-block">등록하기</button>
+          <p id="form-message" class="form-message" hidden></p>
+        </div>
+      </form>
+
+      <footer class="site-footer">
+        <small>Express + MariaDB</small>
+      </footer>
+    </div>
+    <script>
+      const formEl = document.getElementById('news-form');
+      const msgEl = document.getElementById('form-message');
+      const submitButton = formEl.querySelector('button[type="submit"]');
+
+      function showMsg(text, type) {
+        msgEl.hidden = false;
+        msgEl.textContent = text;
+        msgEl.className = 'form-message ' + (type === 'ok' ? 'ok' : 'err');
+      }
+
+      function hideMsg() {
+        msgEl.hidden = true;
+        msgEl.textContent = '';
+        msgEl.className = 'form-message';
+      }
+
+      formEl.addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        hideMsg();
+        submitButton.disabled = true;
+        submitButton.textContent = '등록 중...';
+
+        const fd = new FormData(formEl);
+        const body = {
+          title: String(fd.get('title') || '').trim(),
+          category: String(fd.get('category') || '').trim(),
+          content: String(fd.get('content') || '').trim(),
+          author: String(fd.get('author') || '').trim()
+        };
+
+        try {
+          const res = await fetch('/api/news', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          });
+          const data = await res.json().catch(() => ({}));
+
+          if (!res.ok) {
+            const hint = data.details ? ` (${data.details})` : '';
+            throw new Error((data.error || '등록에 실패했습니다.') + hint);
+          }
+
+          showMsg(data.message || '등록되었습니다. 목록으로 이동합니다.', 'ok');
+          formEl.reset();
+          setTimeout(() => {
+            window.location.href = '/?created=1';
+          }, 400);
+        } catch (e) {
+          showMsg(e.message || '오류가 발생했습니다.', 'err');
+        } finally {
+          submitButton.disabled = false;
+          submitButton.textContent = '등록하기';
+        }
+      });
+    </script>
+  </body>
+</html>
