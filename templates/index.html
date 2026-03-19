@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>충정일보 — 신문 플랫폼</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="site-header">
+        <h1 class="masthead">충정일보</h1>
+        <p class="tagline">Chungjeong Daily — 신문 플랫폼</p>
+      </header>
+
+      <main class="layout-grid">
+        <section class="area-featured" aria-labelledby="featured-heading">
+          <h2 id="featured-heading" class="section-title">최신 기사</h2>
+          <article id="featured-article" class="featured-card">
+            <p class="placeholder">목록을 불러오는 중…</p>
+          </article>
+        </section>
+
+        <aside class="area-submit" aria-labelledby="submit-heading">
+          <h2 id="submit-heading" class="section-title">기사 송고</h2>
+          <form id="news-form" class="submit-form" novalidate>
+            <label>
+              제목
+              <input type="text" name="title" required maxlength="255" />
+            </label>
+            <label>
+              분류
+              <input type="text" name="category" required maxlength="100" />
+            </label>
+            <label>
+              기자명
+              <input type="text" name="author" required maxlength="100" />
+            </label>
+            <label>
+              본문
+              <textarea name="content" rows="6" required></textarea>
+            </label>
+            <button type="submit" class="btn-submit">송고</button>
+            <p id="form-message" class="form-message" hidden></p>
+          </form>
+        </aside>
+
+        <section class="area-list" aria-labelledby="list-heading">
+          <h2 id="list-heading" class="section-title">전체 기사</h2>
+          <ul id="news-list" class="news-list"></ul>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <small>과제용 데모 — Express + MariaDB</small>
+      </footer>
+    </div>
+    <script>
+      const featuredEl = document.getElementById('featured-article');
+      const listEl = document.getElementById('news-list');
+      const formEl = document.getElementById('news-form');
+      const msgEl = document.getElementById('form-message');
+
+      /** @param {HTMLElement} el @param {string} text */
+      async function setTextAsync(el, text) {
+        await Promise.resolve();
+        el.textContent = text;
+      }
+
+      async function showFormMessageAsync(text, type) {
+        await Promise.resolve();
+        msgEl.hidden = false;
+        msgEl.textContent = text;
+        msgEl.className = 'form-message ' + (type === 'ok' ? 'ok' : 'err');
+      }
+
+      async function hideFormMessageAsync() {
+        await Promise.resolve();
+        msgEl.hidden = true;
+        msgEl.textContent = '';
+        msgEl.className = 'form-message';
+      }
+
+      async function renderFeaturedAsync(news) {
+        await Promise.resolve();
+        featuredEl.innerHTML = '';
+
+        if (!news.length) {
+          const p = document.createElement('p');
+          p.className = 'placeholder';
+          p.textContent = '등록된 기사가 없습니다. 오른쪽에서 송고해 보세요.';
+          featuredEl.appendChild(p);
+          return;
+        }
+
+        const item = news[0];
+        const meta = document.createElement('p');
+        meta.className = 'meta';
+        meta.textContent = `${item.category} · ${item.author} · #${item.id}`;
+
+        const h3 = document.createElement('h3');
+        h3.textContent = item.title;
+
+        const body = document.createElement('div');
+        body.className = 'body';
+        body.textContent = item.content;
+
+        featuredEl.appendChild(meta);
+        featuredEl.appendChild(h3);
+        featuredEl.appendChild(body);
+      }
+
+      async function renderListAsync(news) {
+        await Promise.resolve();
+        listEl.innerHTML = '';
+
+        if (!news.length) {
+          const li = document.createElement('li');
+          await setTextAsync(li, '목록이 비어 있습니다.');
+          listEl.appendChild(li);
+          return;
+        }
+
+        for (const item of news) {
+          const li = document.createElement('li');
+          const title = document.createElement('span');
+          title.className = 'item-title';
+          title.textContent = item.title;
+          const meta = document.createElement('span');
+          meta.className = 'item-meta';
+          meta.textContent = `${item.category} · ${item.author} · #${item.id}`;
+          li.appendChild(title);
+          li.appendChild(meta);
+          listEl.appendChild(li);
+        }
+      }
+
+      async function loadNewsAsync() {
+        featuredEl.innerHTML =
+          '<p class="placeholder">목록을 불러오는 중…</p>';
+        listEl.innerHTML = '';
+
+        try {
+          const res = await fetch('/api/news');
+          const data = await res.json();
+
+          if (!res.ok) {
+            const hint = data.details ? ` (${data.details})` : '';
+            throw new Error(
+              (data.error || '목록을 불러오지 못했습니다.') + hint
+            );
+          }
+
+          await renderFeaturedAsync(data);
+          await renderListAsync(data);
+        } catch (e) {
+          featuredEl.innerHTML = '';
+          const p = document.createElement('p');
+          p.className = 'placeholder';
+          p.textContent = e.message || '네트워크 오류';
+          featuredEl.appendChild(p);
+          listEl.innerHTML = '';
+          const li = document.createElement('li');
+          li.textContent = e.message || '목록을 불러올 수 없습니다.';
+          listEl.appendChild(li);
+        }
+      }
+
+      async function handleSubmitAsync(ev) {
+        ev.preventDefault();
+        await hideFormMessageAsync();
+
+        const fd = new FormData(formEl);
+        const body = {
+          title: String(fd.get('title') || '').trim(),
+          category: String(fd.get('category') || '').trim(),
+          content: String(fd.get('content') || '').trim(),
+          author: String(fd.get('author') || '').trim()
+        };
+
+        try {
+          const res = await fetch('/api/news', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          });
+          const data = await res.json().catch(() => ({}));
+
+          if (!res.ok) {
+            const hint = data.details ? ` (${data.details})` : '';
+            throw new Error(
+              (data.error || '송고에 실패했습니다.') + hint
+            );
+          }
+
+          await showFormMessageAsync(data.message || '등록되었습니다.', 'ok');
+          formEl.reset();
+          await loadNewsAsync();
+        } catch (e) {
+          await showFormMessageAsync(
+            e.message || '오류가 발생했습니다.',
+            'err'
+          );
+        }
+      }
+
+      async function mainAsync() {
+        formEl.addEventListener('submit', (ev) => {
+          void handleSubmitAsync(ev);
+        });
+        await loadNewsAsync();
+      }
+
+      void mainAsync().catch((err) => console.error(err));
+    </script>
+  </body>
+</html>

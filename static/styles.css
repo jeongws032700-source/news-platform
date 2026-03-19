@@ -1,0 +1,208 @@
+/* 5단계: 12칸 이상 그리드, 1200px 이상 고정 폭, areas, gap */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:root {
+  --ink: #1a1a1a;
+  --paper: #f7f4ef;
+  --accent: #8b2332;
+  --muted: #5c5c5c;
+  --border: #c9c4bc;
+  --card: #fff;
+}
+
+body {
+  margin: 0;
+  font-family: "Georgia", "Times New Roman", serif;
+  color: var(--ink);
+  background: var(--paper);
+  line-height: 1.5;
+}
+
+.page {
+  min-width: 1200px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 2.5rem;
+}
+
+.site-header {
+  text-align: center;
+  border-bottom: 4px double var(--ink);
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.masthead {
+  margin: 0;
+  font-size: 2.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tagline {
+  margin: 0.35rem 0 0;
+  font-size: 0.95rem;
+  color: var(--muted);
+  font-family: system-ui, sans-serif;
+}
+
+.section-title {
+  font-size: 1.1rem;
+  margin: 0 0 0.75rem;
+  border-left: 4px solid var(--accent);
+  padding-left: 0.5rem;
+}
+
+/* 12열 그리드 + grid-template-areas */
+.layout-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  grid-template-areas:
+    "feat feat feat feat feat feat feat feat side side side side"
+    "list list list list list list list list list list list list";
+  column-gap: 1.75rem;
+  row-gap: 1.75rem;
+  align-items: start;
+}
+
+/* grid-template-areas + 최신 기사 8칸 span (과제 요구) */
+.area-featured {
+  grid-column: 1 / span 8;
+  grid-row: 1;
+}
+
+.area-submit {
+  grid-column: 9 / span 4;
+  grid-row: 1;
+}
+
+.area-list {
+  grid-column: 1 / -1;
+  grid-row: 2;
+}
+
+.featured-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  padding: 1.25rem 1.5rem;
+  min-height: 12rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.featured-card .meta {
+  font-family: system-ui, sans-serif;
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+
+.featured-card h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1.65rem;
+  line-height: 1.25;
+}
+
+.featured-card .body {
+  font-size: 1rem;
+  white-space: pre-wrap;
+}
+
+.placeholder {
+  color: var(--muted);
+  font-style: italic;
+  margin: 0;
+}
+
+.submit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  padding: 1rem;
+  font-family: system-ui, sans-serif;
+  font-size: 0.9rem;
+}
+
+.submit-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.submit-form input,
+.submit-form textarea {
+  padding: 0.45rem 0.5rem;
+  border: 1px solid var(--border);
+  font: inherit;
+}
+
+.btn-submit {
+  margin-top: 0.25rem;
+  padding: 0.55rem 1rem;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-submit:hover {
+  filter: brightness(1.08);
+}
+
+.form-message {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.form-message.ok {
+  color: #1b5e20;
+}
+
+.form-message.err {
+  color: #b71c1c;
+}
+
+.news-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.news-list li {
+  background: var(--card);
+  border: 1px solid var(--border);
+  padding: 0.75rem 1rem;
+  font-family: system-ui, sans-serif;
+  font-size: 0.9rem;
+}
+
+.news-list .item-title {
+  font-weight: 700;
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.news-list .item-meta {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.site-footer {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  text-align: center;
+  color: var(--muted);
+  font-family: system-ui, sans-serif;
+  font-size: 0.8rem;
+}
