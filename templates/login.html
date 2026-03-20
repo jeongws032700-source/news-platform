@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>로그인</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"
+    />
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="page login-page">
+      <header class="top-nav">
+        <a href="/" class="nav-back" aria-label="홈으로 이동">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+        </a>
+        <span class="nav-title">로그인</span>
+        <span style="width: 40px"></span>
+      </header>
+
+      <section class="card login-card">
+        <p class="section-label">JWT 로그인</p>
+        <h1 class="login-title">로그인 후 기사 작성과 삭제를 사용할 수 있어요</h1>
+        <p class="write-hero-copy">
+          이 데모는 JWT를 <code>localStorage</code>에 저장합니다.
+        </p>
+
+        <form id="login-form" class="form-stack" novalidate>
+          <div class="field">
+            <label for="f-username">아이디</label>
+            <input
+              id="f-username"
+              type="text"
+              name="username"
+              required
+              maxlength="50"
+              placeholder="아이디를 입력하세요"
+              autocomplete="username"
+            />
+          </div>
+
+          <div class="field">
+            <label for="f-password">비밀번호</label>
+            <input
+              id="f-password"
+              type="password"
+              name="password"
+              required
+              maxlength="100"
+              placeholder="비밀번호를 입력하세요"
+              autocomplete="current-password"
+            />
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-block">로그인</button>
+            <p id="form-message" class="form-message" hidden></p>
+          </div>
+        </form>
+
+        <p class="helper-text">
+          테스트 계정: <code>reporter1</code>
+        </p>
+      </section>
+    </div>
+
+    <script>
+      const formEl = document.getElementById('login-form');
+      const msgEl = document.getElementById('form-message');
+      const submitButton = formEl.querySelector('button[type="submit"]');
+      const nextUrl =
+        new URLSearchParams(window.location.search).get('next') || '/?login=1';
+
+      function showMsg(text, type) {
+        msgEl.hidden = false;
+        msgEl.textContent = text;
+        msgEl.className = 'form-message ' + (type === 'ok' ? 'ok' : 'err');
+      }
+
+      function hideMsg() {
+        msgEl.hidden = true;
+        msgEl.textContent = '';
+        msgEl.className = 'form-message';
+      }
+
+      formEl.addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        hideMsg();
+        submitButton.disabled = true;
+        submitButton.textContent = '로그인 중...';
+
+        const fd = new FormData(formEl);
+        const body = {
+          username: String(fd.get('username') || '').trim(),
+          password: String(fd.get('password') || '').trim()
+        };
+
+        try {
+          const res = await fetch('/api/login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body)
+          });
+          const data = await res.json().catch(() => ({}));
+
+          if (!res.ok) {
+            const hint = data.details ? ` (${data.details})` : '';
+            throw new Error((data.error || '로그인에 실패했습니다.') + hint);
+          }
+
+          localStorage.setItem('token', data.token);
+          showMsg(data.message || '로그인에 성공했습니다.', 'ok');
+
+          setTimeout(() => {
+            window.location.href = nextUrl;
+          }, 300);
+        } catch (err) {
+          showMsg(err.message || '로그인에 실패했습니다.', 'err');
+        } finally {
+          submitButton.disabled = false;
+          submitButton.textContent = '로그인';
+        }
+      });
+    </script>
+  </body>
+</html>

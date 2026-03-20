@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>기사 작성 — 충정일보</title>
+    <title>기사 작성</title>
     <link
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"
@@ -13,18 +13,26 @@
   <body>
     <div class="page">
       <header class="top-nav">
-        <a href="/" class="nav-back" aria-label="홈으로">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <a href="/" class="nav-back" aria-label="홈으로 이동">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
             <path d="M15 18l-6-6 6-6" />
           </svg>
         </a>
         <span class="nav-title">기사 작성</span>
-        <span style="width:40px"></span>
+        <span id="writer-status" class="auth-chip auth-chip--inline">로그인 확인 중...</span>
       </header>
 
       <div class="write-hero">
-        <h1>새 기사를 등록해요</h1>
-        <p>제목과 본문을 입력한 뒤 등록하면 목록에 반영돼요.</p>
+        <h1>새 기사를 작성하세요</h1>
+        <p>로그인한 사용자만 기사를 등록할 수 있습니다.</p>
       </div>
 
       <form id="news-form" class="card form-stack" novalidate>
@@ -41,7 +49,7 @@
           />
         </div>
         <div class="field">
-          <label for="f-category">분류</label>
+          <label for="f-category">카테고리</label>
           <input
             id="f-category"
             type="text"
@@ -60,7 +68,7 @@
             name="author"
             required
             maxlength="100"
-            placeholder="이름을 입력하세요"
+            placeholder="기자 이름을 입력하세요"
             autocomplete="name"
           />
         </div>
@@ -80,13 +88,17 @@
       </form>
 
       <footer class="site-footer">
-        <small>Express + MariaDB</small>
+        <small>POST /api/news 요청에는 JWT 토큰이 필요합니다.</small>
       </footer>
     </div>
+
     <script>
+      const token = localStorage.getItem('token') || '';
       const formEl = document.getElementById('news-form');
       const msgEl = document.getElementById('form-message');
       const submitButton = formEl.querySelector('button[type="submit"]');
+      const writerStatusEl = document.getElementById('writer-status');
+      const authorInputEl = document.getElementById('f-author');
 
       function showMsg(text, type) {
         msgEl.hidden = false;
@@ -98,6 +110,36 @@
         msgEl.hidden = true;
         msgEl.textContent = '';
         msgEl.className = 'form-message';
+      }
+
+      async function requireLogin() {
+        if (!token) {
+          window.location.href = '/login?next=/write';
+          return false;
+        }
+
+        try {
+          const res = await fetch('/api/me', {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          });
+          const data = await res.json().catch(() => ({}));
+
+          if (!res.ok) {
+            localStorage.removeItem('token');
+            window.location.href = '/login?next=/write';
+            return false;
+          }
+
+          writerStatusEl.textContent = `${data.user.displayName} 님 로그인됨`;
+          authorInputEl.value = data.user.displayName;
+          return true;
+        } catch (err) {
+          localStorage.removeItem('token');
+          window.location.href = '/login?next=/write';
+          return false;
+        }
       }
 
       formEl.addEventListener('submit', async (ev) => {
@@ -117,7 +159,10 @@
         try {
           const res = await fetch('/api/news', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            },
             body: JSON.stringify(body)
           });
           const data = await res.json().catch(() => ({}));
@@ -127,18 +172,20 @@
             throw new Error((data.error || '등록에 실패했습니다.') + hint);
           }
 
-          showMsg(data.message || '등록되었습니다. 목록으로 이동합니다.', 'ok');
+          showMsg(data.message || '기사가 등록되었습니다.', 'ok');
           formEl.reset();
           setTimeout(() => {
             window.location.href = '/?created=1';
           }, 400);
-        } catch (e) {
-          showMsg(e.message || '오류가 발생했습니다.', 'err');
+        } catch (err) {
+          showMsg(err.message || '등록에 실패했습니다.', 'err');
         } finally {
           submitButton.disabled = false;
           submitButton.textContent = '등록하기';
         }
       });
+
+      requireLogin().catch((err) => console.error(err));
     </script>
   </body>
 </html>

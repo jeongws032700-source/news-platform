@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>충정일보 — 신문 플랫폼</title>
+    <title>뉴스 플랫폼</title>
     <link
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"
@@ -13,58 +13,68 @@
   <body>
     <div class="page page--home">
       <header class="top-nav top-nav--home">
-        <span class="brand">충정일보</span>
-        <p class="masthead-sub">Chungjeong Daily</p>
+        <span class="brand">뉴스 플랫폼</span>
+        <p class="masthead-sub">JWT 로그인 데모</p>
         <div class="nav-actions">
-          <a href="/write" class="btn btn-primary">기사 송고</a>
+          <span id="auth-status" class="auth-chip">로그인 확인 중...</span>
+          <a id="write-link" href="/write" class="btn btn-primary" hidden>기사 작성</a>
+          <a id="login-link" href="/login" class="btn btn-ghost">로그인</a>
+          <button id="logout-button" type="button" class="btn btn-ghost" hidden>
+            로그아웃
+          </button>
         </div>
       </header>
 
       <p id="page-message" class="page-message" hidden></p>
 
       <main class="layout-grid">
-        <section
-          class="area-featured"
-          aria-labelledby="featured-heading"
-        >
-          <h2 id="featured-heading" class="section-title">헤드라인 · 최신 기사</h2>
+        <section class="area-featured" aria-labelledby="featured-heading">
+          <h2 id="featured-heading" class="section-title">최신 기사</h2>
           <article id="featured-article" class="card featured-card">
-            <p class="placeholder">목록을 불러오는 중…</p>
+            <p class="placeholder">기사를 불러오는 중입니다...</p>
           </article>
         </section>
 
         <aside class="area-sidebar" aria-labelledby="sidebar-heading">
-          <h2 id="sidebar-heading" class="section-title">섹션 / 랭킹</h2>
+          <h2 id="sidebar-heading" class="section-title">개요</h2>
           <div class="sidebar-card">
-            <p class="sidebar-label">최근 등록 TOP</p>
+            <p class="sidebar-label">TOP 5</p>
             <ol id="rank-list" class="rank-list"></ol>
-            <p class="sidebar-label">주요 분류</p>
+            <p class="sidebar-label">카테고리</p>
             <ul id="category-list" class="category-chips"></ul>
-            <a href="/write" class="btn btn-primary btn-block sidebar-cta"
-              >새 기사 등록</a
-            >
+            <a id="sidebar-action" href="/login" class="btn btn-primary btn-block sidebar-cta">
+              로그인 후 기사 작성
+            </a>
           </div>
         </aside>
 
         <section class="area-list" aria-labelledby="list-heading">
-          <h2 id="list-heading" class="section-title">전체 기사 목록</h2>
+          <h2 id="list-heading" class="section-title">전체 기사</h2>
           <ul id="news-list" class="news-list"></ul>
         </section>
       </main>
 
       <footer class="site-footer">
-        <small>과제용 데모 — Express + MariaDB · CSS Grid 12열</small>
+        <small>Express + MariaDB + JWT 데모</small>
       </footer>
     </div>
+
     <script>
       const featuredEl = document.getElementById('featured-article');
       const listEl = document.getElementById('news-list');
       const rankEl = document.getElementById('rank-list');
       const categoryEl = document.getElementById('category-list');
       const messageEl = document.getElementById('page-message');
+      const authStatusEl = document.getElementById('auth-status');
+      const writeLinkEl = document.getElementById('write-link');
+      const loginLinkEl = document.getElementById('login-link');
+      const logoutButtonEl = document.getElementById('logout-button');
+      const sidebarActionEl = document.getElementById('sidebar-action');
 
-      function setText(el, text) {
-        el.textContent = text;
+      let currentUser = null;
+
+      function getToken() {
+        return localStorage.getItem('token') || '';
       }
 
       function showPageMessage(text) {
@@ -85,15 +95,78 @@
         return normalized.slice(0, maxLength).trimEnd() + '...';
       }
 
+      function updateAuthUI() {
+        const isLoggedIn = Boolean(currentUser);
+
+        if (isLoggedIn) {
+          authStatusEl.textContent = `${currentUser.displayName} 님 로그인됨`;
+          writeLinkEl.hidden = false;
+          loginLinkEl.hidden = true;
+          logoutButtonEl.hidden = false;
+          sidebarActionEl.href = '/write';
+          sidebarActionEl.textContent = '기사 작성하러 가기';
+          return;
+        }
+
+        authStatusEl.textContent = '로그아웃 상태';
+        writeLinkEl.hidden = true;
+        loginLinkEl.hidden = false;
+        logoutButtonEl.hidden = true;
+        sidebarActionEl.href = '/login';
+        sidebarActionEl.textContent = '로그인 후 기사 작성';
+      }
+
+      async function fetchCurrentUser() {
+        const token = getToken();
+
+        if (!token) {
+          currentUser = null;
+          updateAuthUI();
+          return;
+        }
+
+        try {
+          const res = await fetch('/api/me', {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          });
+
+          const data = await res.json().catch(() => ({}));
+
+          if (!res.ok) {
+            localStorage.removeItem('token');
+            currentUser = null;
+            updateAuthUI();
+            return;
+          }
+
+          currentUser = data.user || null;
+          updateAuthUI();
+        } catch (err) {
+          currentUser = null;
+          updateAuthUI();
+        }
+      }
+
       async function deleteNews(id) {
-        const ok = window.confirm(`기사 #${id} 를 삭제할까요?`);
+        if (!currentUser) {
+          showPageMessage('먼저 로그인해 주세요.');
+          window.location.href = '/login';
+          return;
+        }
+
+        const ok = window.confirm(`기사 #${id}를 삭제할까요?`);
         if (!ok) {
           return;
         }
 
         try {
           const res = await fetch(`/api/news/${id}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: {
+              Authorization: `Bearer ${getToken()}`
+            }
           });
           const data = await res.json().catch(() => ({}));
 
@@ -105,8 +178,19 @@
           showPageMessage(data.message || '기사가 삭제되었습니다.');
           await loadNews();
         } catch (err) {
-          showPageMessage(err.message || '삭제 중 오류가 발생했습니다.');
+          showPageMessage(err.message || '삭제에 실패했습니다.');
         }
+      }
+
+      function createDeleteButton(id) {
+        const deleteButton = document.createElement('button');
+        deleteButton.type = 'button';
+        deleteButton.className = 'btn btn-danger btn-danger--inline';
+        deleteButton.textContent = '삭제';
+        deleteButton.addEventListener('click', () => {
+          deleteNews(id).catch((error) => console.error(error));
+        });
+        return deleteButton;
       }
 
       function renderFeatured(news) {
@@ -115,8 +199,7 @@
         if (!news.length) {
           const p = document.createElement('p');
           p.className = 'placeholder';
-          p.textContent =
-            '등록된 기사가 없습니다. 우측에서 기사 송고를 눌러 등록해 보세요.';
+          p.textContent = '아직 기사가 없습니다.';
           featuredEl.appendChild(p);
           return;
         }
@@ -129,47 +212,45 @@
         meta.className = 'meta';
         meta.textContent = `${item.category} · ${item.author} · #${item.id}`;
 
-        const h3 = document.createElement('h3');
-        h3.textContent = item.title;
+        const title = document.createElement('h3');
+        title.textContent = item.title;
 
         const body = document.createElement('div');
         body.className = 'body';
         body.textContent = item.content;
 
-        const actions = document.createElement('div');
-        actions.className = 'card-actions';
-
-        const deleteButton = document.createElement('button');
-        deleteButton.type = 'button';
-        deleteButton.className = 'btn btn-danger';
-        deleteButton.textContent = '삭제';
-        deleteButton.addEventListener('click', () => {
-          deleteNews(item.id).catch((error) => console.error(error));
-        });
-
         textWrap.appendChild(meta);
-        textWrap.appendChild(h3);
+        textWrap.appendChild(title);
         textWrap.appendChild(body);
-        actions.appendChild(deleteButton);
-        textWrap.appendChild(actions);
+
+        if (currentUser) {
+          const actions = document.createElement('div');
+          actions.className = 'card-actions';
+          actions.appendChild(createDeleteButton(item.id));
+          textWrap.appendChild(actions);
+        }
+
         featuredEl.appendChild(textWrap);
       }
 
       function renderRank(news) {
         rankEl.innerHTML = '';
+
         if (!news.length) {
           const li = document.createElement('li');
           li.textContent = '데이터 없음';
           rankEl.appendChild(li);
           return;
         }
+
         const top = news.slice(0, 5);
-        let n = 1;
-        for (const item of top) {
+
+        for (let index = 0; index < top.length; index += 1) {
+          const item = top[index];
           const li = document.createElement('li');
           const rank = document.createElement('span');
           rank.className = 'rank-num';
-          rank.textContent = String(n++);
+          rank.textContent = String(index + 1);
           const span = document.createElement('span');
           span.className = 'rank-title';
           span.textContent = item.title;
@@ -184,12 +265,13 @@
 
         if (!news.length) {
           const li = document.createElement('li');
-          li.textContent = '분류 없음';
+          li.textContent = '카테고리 없음';
           categoryEl.appendChild(li);
           return;
         }
 
         const counts = new Map();
+
         for (const item of news) {
           const key = item.category || '미분류';
           counts.set(key, (counts.get(key) || 0) + 1);
@@ -201,13 +283,10 @@
 
         for (const [category, count] of sorted) {
           const li = document.createElement('li');
-
           const name = document.createElement('span');
-          name.textContent = category;
-
           const badge = document.createElement('strong');
+          name.textContent = category;
           badge.textContent = String(count);
-
           li.appendChild(name);
           li.appendChild(badge);
           categoryEl.appendChild(li);
@@ -219,7 +298,7 @@
 
         if (!news.length) {
           const li = document.createElement('li');
-          setText(li, '목록이 비어 있습니다.');
+          li.textContent = '기사가 없습니다.';
           listEl.appendChild(li);
           return;
         }
@@ -243,73 +322,80 @@
           meta.className = 'item-meta';
           meta.textContent = `${item.category} · ${item.author} · #${item.id}`;
 
-          const actions = document.createElement('div');
-          actions.className = 'card-actions';
-
-          const deleteButton = document.createElement('button');
-          deleteButton.type = 'button';
-          deleteButton.className = 'btn btn-danger btn-danger--inline';
-          deleteButton.textContent = '삭제';
-          deleteButton.addEventListener('click', () => {
-            deleteNews(item.id).catch((error) => console.error(error));
-          });
-
           body.appendChild(title);
           body.appendChild(summary);
           body.appendChild(meta);
-          actions.appendChild(deleteButton);
-          body.appendChild(actions);
+
+          if (currentUser) {
+            const actions = document.createElement('div');
+            actions.className = 'card-actions';
+            actions.appendChild(createDeleteButton(item.id));
+            body.appendChild(actions);
+          }
+
           li.appendChild(body);
           listEl.appendChild(li);
         }
       }
 
       async function loadNews() {
-        featuredEl.innerHTML =
-          '<p class="placeholder">목록을 불러오는 중…</p>';
+        featuredEl.innerHTML = '<p class="placeholder">기사를 불러오는 중입니다...</p>';
         listEl.innerHTML = '';
         rankEl.innerHTML = '';
         categoryEl.innerHTML = '';
 
         try {
           const res = await fetch('/api/news');
-          const data = await res.json();
+          const data = await res.json().catch(() => []);
 
           if (!res.ok) {
             const hint = data.details ? ` (${data.details})` : '';
-            throw new Error(
-              (data.error || '목록을 불러오지 못했습니다.') + hint
-            );
+            throw new Error((data.error || '기사를 불러오지 못했습니다.') + hint);
           }
 
           renderFeatured(data);
           renderRank(data);
           renderCategories(data);
           renderList(data);
-        } catch (e) {
+        } catch (err) {
           featuredEl.innerHTML = '';
           const p = document.createElement('p');
           p.className = 'placeholder';
-          p.textContent = e.message || '네트워크 오류';
+          p.textContent = err.message || '네트워크 오류';
           featuredEl.appendChild(p);
-          listEl.innerHTML = '';
-          rankEl.innerHTML = '';
-          categoryEl.innerHTML = '';
+
           const li = document.createElement('li');
-          li.textContent = e.message || '목록을 불러올 수 없습니다.';
+          li.textContent = err.message || '기사를 불러오지 못했습니다.';
+          listEl.innerHTML = '';
           listEl.appendChild(li);
         }
       }
 
+      logoutButtonEl.addEventListener('click', () => {
+        localStorage.removeItem('token');
+        currentUser = null;
+        updateAuthUI();
+        showPageMessage('로그아웃되었습니다.');
+        loadNews().catch((err) => console.error(err));
+      });
+
       const params = new URLSearchParams(window.location.search);
       if (params.get('created') === '1') {
-        showPageMessage('새 기사가 등록되었습니다. 최신 기사 목록을 다시 불러왔어요.');
+        showPageMessage('기사가 등록되었습니다.');
+        window.history.replaceState({}, '', '/');
+      } else if (params.get('login') === '1') {
+        showPageMessage('로그인에 성공했습니다.');
         window.history.replaceState({}, '', '/');
       } else {
         hidePageMessage();
       }
 
-      loadNews().catch((err) => console.error(err));
+      async function boot() {
+        await fetchCurrentUser();
+        await loadNews();
+      }
+
+      boot().catch((err) => console.error(err));
     </script>
   </body>
 </html>
